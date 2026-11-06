@@ -645,6 +645,7 @@
         let html5QrCode = null;
         let isCameraActive = false;
         let isProcessing = false;
+        let nextCameraScanAt = 0;
         let selectedCameraId = null;
         let currentMethod = 'camera';
         let availableCameras = [];
@@ -1059,7 +1060,8 @@
                     cameraId,
                     { fps: 10, qrbox: { width: qrSize, height: qrSize } },
                     function(decodedText) {
-                        if (!isProcessing) {
+                        if (!isProcessing && Date.now() >= nextCameraScanAt) {
+                            nextCameraScanAt = Date.now() + 3000;
                             processScanValue(decodedText);
                         }
                     },

@@ -515,6 +515,7 @@
     let currentFacingMode = 'environment'; // 'environment' = back, 'user' = front
     let scanning          = false;
     let processingQr      = false;
+    let nextCameraScanAt  = 0;
     let count             = 0;
 
     let usbBuffer = '';
@@ -692,8 +693,9 @@
                     aspectRatio: 1.333,
                 },
                 function(decodedText) {
-                    if (processingQr) return;
+                    if (processingQr || Date.now() < nextCameraScanAt) return;
                     processingQr = true;
+                    nextCameraScanAt = Date.now() + 3000;
                     processScanValue(decodedText);
                 },
                 function() {}
