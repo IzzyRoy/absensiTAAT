@@ -54,7 +54,7 @@
                 </div>
                 <div class="col-6 col-md-2">
                     <div class="card glass-card border-0 shadow-sm p-3 text-center">
-                        <span class="fs-3 fw-bold text-danger">{{ $stats['alpha'] }}</span>
+                        <span class="fs-3 fw-bold text-danger">{{ $stats['tidak_hadir'] }}</span>
                         <span class="fs-8 text-muted text-uppercase fw-semibold">Tidak Hadir</span>
                     </div>
                 </div>
@@ -82,7 +82,7 @@
                             <option value="terlambat" {{ $selectedStatus === 'terlambat' ? 'selected' : '' }}>Terlambat</option>
                             <option value="izin" {{ $selectedStatus === 'izin' ? 'selected' : '' }}>Izin</option>
                             <option value="sakit" {{ $selectedStatus === 'sakit' ? 'selected' : '' }}>Sakit</option>
-                            <option value="alpha" {{ $selectedStatus === 'alpha' ? 'selected' : '' }}>Tidak Hadir</option>
+                            <option value="tidak_hadir" {{ $selectedStatus === 'tidak_hadir' ? 'selected' : '' }}>Tidak Hadir</option>
                         </select>
                         </div>
                     </div>
@@ -150,7 +150,7 @@
                                                     $cfg = $statusConfig[$att->status] ?? ['bg' => 'bg-secondary', 'icon' => 'bi-question-circle'];
                                                 @endphp
                                                 <span class="badge {{ $cfg['bg'] }} px-2 py-1">
-                                                    <i class="bi {{ $cfg['icon'] }} me-1"></i>{{ ucfirst($att->status) }}
+                                                    <i class="bi {{ $cfg['icon'] }} me-1"></i>{{ $att->status === 'tidak_hadir' ? 'Tidak Hadir' : ucfirst($att->status) }}
                                                 </span>
                                             </td>
                                             <td data-label="Metode">
