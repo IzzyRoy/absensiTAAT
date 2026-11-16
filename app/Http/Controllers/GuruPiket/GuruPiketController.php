@@ -7,6 +7,8 @@ use App\Models\AttendanceGate;
 use App\Models\PetugasPiket;
 use App\Services\AttendanceGateService;
 use App\Services\ActivityLogService;
+use App\Services\AttendanceDashboardUpdateService;
+use App\Services\DateTimeService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,10 +16,12 @@ use Illuminate\Support\Facades\Auth;
 class GuruPiketController extends Controller
 {
     protected AttendanceGateService $service;
+    protected DateTimeService $dateTimeService;
 
-    public function __construct(AttendanceGateService $service)
+    public function __construct(AttendanceGateService $service, DateTimeService $dateTimeService)
     {
         $this->service = $service;
+        $this->dateTimeService = $dateTimeService;
     }
 
     /**
@@ -71,9 +75,9 @@ class GuruPiketController extends Controller
     /**
      * Dashboard guru piket: ringkasan scan hari ini oleh petugas sesi ini.
      */
-    public function dashboard()
+    public function dashboard(AttendanceDashboardUpdateService $attendanceUpdates)
     {
-        $today          = Carbon::today()->format('Y-m-d');
+        $today          = $this->dateTimeService->currentDate();
         $petugasPiketId = session('piket_petugas_id');
         $namaLengkap    = session('piket_nama_lengkap');
 
@@ -89,8 +93,13 @@ class GuruPiketController extends Controller
             'terlambat' => $recentScans->where('status', 'terlambat')->count(),
             'total'     => $recentScans->count(),
         ];
+        $attendanceRevision = $attendanceUpdates->revision(
+            AttendanceGate::query()
+                ->where('petugas_piket_id', $petugasPiketId)
+                ->whereDate('date', $today)
+        );
 
-        return view('guru-piket.dashboard', compact('recentScans', 'stats', 'namaLengkap', 'today'));
+        return view('guru-piket.dashboard', compact('recentScans', 'stats', 'namaLengkap', 'today', 'attendanceRevision'));
     }
 
     /**

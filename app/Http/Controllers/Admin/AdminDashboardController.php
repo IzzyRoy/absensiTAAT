@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\DateTimeService;
+use App\Services\AttendanceDashboardUpdateService;
 
 class AdminDashboardController extends Controller
 {
@@ -24,9 +25,12 @@ class AdminDashboardController extends Controller
     /**
      * Show real-time statistics and weekly trend on the Admin Dashboard.
      */
-    public function index()
+    public function index(AttendanceDashboardUpdateService $attendanceUpdates)
     {
         $today = $this->dateTimeService->currentDate();
+        $attendanceRevision = $attendanceUpdates->revision(
+            AttendanceGate::query()->whereDate('date', $today)
+        );
 
         // 1. Current Stats (New Logic)
         $totalSiswa = Student::where('is_active', true)->count();
@@ -113,7 +117,8 @@ class AdminDashboardController extends Controller
             'chartSakit',
             'chartIzin',
             'chartTidakHadir',
-            'activities'
+            'activities',
+            'attendanceRevision'
         ));
     }
 

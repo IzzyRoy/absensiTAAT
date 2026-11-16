@@ -362,6 +362,11 @@
         </div>
 
     </div>
+    @include('components.attendance-live-updates', [
+        'url' => route('attendance.updates'),
+        'revision' => $attendanceRevision,
+    ])
+
     @push('scripts')
     <script>
         // Nothing special needed — QR generation is on the qrcode page

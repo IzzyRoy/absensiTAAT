@@ -254,6 +254,13 @@
         @endif
     </div>
 
+    @if($activeStudent)
+        @include('components.attendance-live-updates', [
+            'url' => route('attendance.updates'),
+            'revision' => $attendanceRevision,
+        ])
+    @endif
+
     @push('scripts')
     <script>
     (function () {

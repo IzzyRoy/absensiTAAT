@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AttendanceDashboardUpdateController;
 use App\Http\Controllers\Student\StudentPortalController;
 use App\Http\Controllers\Teacher\TeacherPortalController;
 use Illuminate\Support\Facades\Route;
@@ -38,6 +39,7 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 
 // Auth Profile
 Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('/attendance/updates', AttendanceDashboardUpdateController::class)->name('attendance.updates');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

@@ -9,9 +9,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Carbon\Carbon;
+use App\Services\AttendanceDashboardUpdateService;
+use App\Services\DateTimeService;
 
 class ParentPortalController extends Controller
 {
+    public function __construct(private DateTimeService $dateTimeService) {}
+
     // ──────────────────────────────────────────────
     // Dashboard
     // ──────────────────────────────────────────────
@@ -19,7 +23,7 @@ class ParentPortalController extends Controller
     /**
      * Main parent dashboard page.
      */
-    public function dashboard(Request $request)
+    public function dashboard(Request $request, AttendanceDashboardUpdateService $attendanceUpdates)
     {
         $parent = Auth::user()->parent;
 
@@ -55,9 +59,14 @@ class ParentPortalController extends Controller
         session(['parent_selected_student' => $activeStudent->id]);
 
         $dashboardData = $this->getDashboardData($activeStudent);
+        $attendanceRevision = $attendanceUpdates->revision(
+            AttendanceGate::query()
+                ->where('student_id', $activeStudent->id)
+                ->whereDate('date', $this->dateTimeService->currentDate())
+        );
 
         return view('parent.dashboard', array_merge(
-            ['children' => $children, 'activeStudent' => $activeStudent],
+            ['children' => $children, 'activeStudent' => $activeStudent, 'attendanceRevision' => $attendanceRevision],
             $dashboardData
         ));
     }
@@ -191,8 +200,9 @@ class ParentPortalController extends Controller
      */
     private function getDashboardData(Student $student): array
     {
-        $today       = Carbon::today()->toDateString();
-        $monthStart  = Carbon::now()->startOfMonth()->toDateString();
+        $today       = $this->dateTimeService->currentDate();
+        $now         = $this->dateTimeService->now();
+        $monthStart  = $now->copy()->startOfMonth()->toDateString();
 
         // Today's attendance record
         $todayRecord = AttendanceGate::where('student_id', $student->id)
@@ -200,7 +210,7 @@ class ParentPortalController extends Controller
             ->first();
 
         // Current-month statistics
-        $summary = $this->buildMonthStats($student->id, now()->year, now()->month);
+        $summary = $this->buildMonthStats($student->id, $now->year, $now->month);
 
         // Recent 10 attendances this month (no pagination on dashboard)
         $recentAttendances = AttendanceGate::where('student_id', $student->id)

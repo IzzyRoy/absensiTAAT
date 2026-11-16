@@ -9,6 +9,7 @@ use App\Models\Semester;
 use App\Models\Student;
 use App\Services\QrTokenService;
 use App\Services\DateTimeService;
+use App\Services\AttendanceDashboardUpdateService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +29,7 @@ class StudentPortalController extends Controller
     /**
      * Dashboard siswa: info profil, statistik kehadiran, QR placeholder.
      */
-    public function dashboard()
+    public function dashboard(AttendanceDashboardUpdateService $attendanceUpdates)
     {
         $user = Auth::user();
         $student = Student::where('user_id', $user->id)->with(['class', 'parent'])->first();
@@ -40,7 +41,7 @@ class StudentPortalController extends Controller
         $semester = Semester::active()->first();
 
         // Attendance stats for current month
-        $now = Carbon::now();
+        $now = $this->dateTimeService->now();
         $monthStart = $now->copy()->startOfMonth()->format('Y-m-d');
         $monthEnd = $now->copy()->endOfMonth()->format('Y-m-d');
 
@@ -75,6 +76,11 @@ class StudentPortalController extends Controller
         }
 
         $qrTtl = (int) config('absensi.qr_token.ttl_seconds', 30);
+        $attendanceRevision = $attendanceUpdates->revision(
+            AttendanceGate::query()
+                ->where('student_id', $student->id)
+                ->whereDate('date', $this->dateTimeService->currentDate())
+        );
 
         return view('student.dashboard', compact(
             'student',
@@ -88,6 +94,7 @@ class StudentPortalController extends Controller
             'totalDays',
             'todaySchedules',
             'qrTtl',
+            'attendanceRevision',
         ));
     }
 

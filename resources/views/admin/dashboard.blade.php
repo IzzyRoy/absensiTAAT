@@ -148,6 +148,11 @@
         </div>
     </div>
 
+    @include('components.attendance-live-updates', [
+        'url' => route('attendance.updates'),
+        'revision' => $attendanceRevision,
+    ])
+
     @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>

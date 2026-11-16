@@ -36,6 +36,32 @@ https://gitlab.com/abisuryoN/absensi-sekolah
 - Git
 - GitLab
 
+### Pembaruan otomatis dashboard absensi
+
+Dashboard admin, siswa, guru piket, dan orang tua memeriksa endpoint `GET /attendance/updates` setiap 30 detik. Jika revisi absensi yang berada dalam cakupan akun berubah, browser memuat ulang dashboard secara otomatis; pengguna tidak perlu menekan refresh. Tab yang sedang tidak terlihat melewati polling, dan permintaan yang masih berjalan tidak ditumpuk.
+
+Polling dipilih sebagai opsi hosting yang paling kompatibel. Repository ini tidak memasang Laravel Reverb, konfigurasi contoh menetapkan `BROADCAST_CONNECTION=log`, dan berkas konfigurasi/deployment yang tersedia tidak membuktikan server produksi dapat menjalankan proses Reverb/WebSocket secara stabil. Kemampuan hosting aktual tetap perlu dikonfirmasi oleh administrator; polling tidak membutuhkan daemon atau koneksi WebSocket yang persisten. Interval 30 detik membatasi beban dan berarti pembaruan dapat tertunda hingga sekitar 30 detik.
+
+Kontrak respons untuk integrasi ini bernama `attendance.gate.updated`; `data` berisi `attendance_id`, `student_id`, `date` (`Y-m-d`), `session_id`, dan `status`, disertai `revision`. Contoh:
+
+```json
+{
+  "event": "attendance.gate.updated",
+  "data": {
+    "attendance_id": 42,
+    "student_id": 7,
+    "date": "2026-11-16",
+    "session_id": null,
+    "status": "hadir"
+  },
+  "revision": "sha256..."
+}
+```
+
+Ini adalah kontrak snapshot HTTP polling, bukan Laravel broadcast event. Data dibatasi menurut peran: admin melihat tanggal sekolah berjalan, siswa melihat datanya sendiri, piket melihat scan yang dikaitkan ke sesi piketnya, dan orang tua melihat anak yang sedang dipilih serta diizinkan oleh policy.
+
+Catatan absensi gerbang saat ini memiliki batas unik `student_id + date`, bukan `session_id`; proses penyimpanan juga tidak menyimpan sesi sekolah pada record gerbang. Karena itu kontrak mengirim `session_id: null` dan identitas yang dapat dipastikan adalah siswa, tanggal, serta record. Polling hanya membaca data dan tidak membuat atau mengubah absensi, sehingga tidak menambah risiko catatan ganda. Batas unik database yang sudah ada tetap menjadi perlindungan pencatatan harian.
+
 ## 2. Persyaratan Sistem
 
 Sebelum menjalankan aplikasi, pastikan perangkat sudah memiliki:
