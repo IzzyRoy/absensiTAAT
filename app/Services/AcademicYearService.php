@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\AcademicYear;
+use App\Models\Semester;
+use App\Services\DateTimeService;
 use Illuminate\Support\Facades\DB;
 
 class AcademicYearService
@@ -31,6 +33,9 @@ class AcademicYearService
             }
 
             $academicYear = AcademicYear::create($data);
+            if (!empty($data['is_active'])) {
+                $this->activateCalendarSemester($academicYear);
+            }
 
             ActivityLogService::logCreate($academicYear, "Menambahkan Tahun Ajaran: {$academicYear->name}");
 
@@ -51,6 +56,9 @@ class AcademicYearService
             }
 
             $academicYear->update($data);
+            if (!empty($data['is_active'])) {
+                $this->activateCalendarSemester($academicYear);
+            }
 
             ActivityLogService::logUpdate($academicYear, $original, "Mengubah Tahun Ajaran: {$academicYear->name}");
 
@@ -72,5 +80,20 @@ class AcademicYearService
             ActivityLogService::logDelete($academicYear, "Menghapus Tahun Ajaran: {$academicYear->name}");
             $academicYear->delete();
         });
+    }
+
+    private function activateCalendarSemester(AcademicYear $academicYear): void
+    {
+        Semester::where('is_active', true)->update(['is_active' => false]);
+
+        $date = app(DateTimeService::class)->currentDate();
+        $semester = $academicYear->semesters()
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->orderByDesc('semester_number')
+            ->first()
+            ?? $academicYear->semesters()->where('semester_number', 1)->first();
+
+        $semester?->update(['is_active' => true]);
     }
 }

@@ -19,6 +19,8 @@ class SemesterRequest extends FormRequest
             'semester_number' => 'required|integer|min:1|max:2',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
+            'holiday_start_date' => 'nullable|required_with:holiday_end_date|date',
+            'holiday_end_date' => 'nullable|required_with:holiday_start_date|date|after_or_equal:holiday_start_date',
             'is_active' => 'nullable|boolean',
         ];
     }
@@ -33,6 +35,9 @@ class SemesterRequest extends FormRequest
             'start_date.required' => 'Tanggal mulai wajib diisi.',
             'end_date.required' => 'Tanggal selesai wajib diisi.',
             'end_date.after_or_equal' => 'Tanggal selesai harus setelah atau sama dengan tanggal mulai.',
+            'holiday_start_date.required_with' => 'Tanggal mulai libur wajib diisi jika tanggal akhir libur diatur.',
+            'holiday_end_date.required_with' => 'Tanggal akhir libur wajib diisi jika tanggal mulai libur diatur.',
+            'holiday_end_date.after_or_equal' => 'Tanggal akhir libur harus setelah atau sama dengan tanggal mulai libur.',
         ];
     }
 }

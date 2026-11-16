@@ -1,6 +1,5 @@
-@extends('layouts.app')
-
-@section('content')
+<x-app-layout>
+    @section('title', 'Finalisasi Tahun Ajaran')
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-10">
@@ -131,4 +130,4 @@
         </div>
     </div>
 </div>
-@endsection
+</x-app-layout>

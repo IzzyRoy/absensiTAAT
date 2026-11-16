@@ -1,6 +1,5 @@
-@extends('layouts.app')
-
-@section('content')
+<x-app-layout>
+    @section('title', 'Transisi Tahun Ajaran')
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-10">
@@ -17,6 +16,25 @@
                         <strong>Tahun Ajaran Aktif:</strong> {{ $currentYear->name }}<br>
                         <strong>Tahun Ajaran Baru:</strong> {{ $nextYear->name }}
                     </div>
+
+                    @if(!$promotionContext['eligible'])
+                        <div class="alert alert-warning" role="status">
+                            <strong>Kenaikan kelas belum dapat dimulai.</strong>
+                            {{ $promotionContext['reason'] }}
+                            @if($promotionContext['semester'])
+                                <div class="small mt-1">
+                                    Semester Genap {{ $currentYear->name }} berakhir
+                                    {{ $promotionContext['semester']->end_date->format('d M Y') }}.
+                                </div>
+                            @endif
+                        </div>
+                    @else
+                        <div class="alert alert-success" role="status">
+                            Kalender menunjukkan Semester Genap {{ $currentYear->name }} telah selesai
+                            ({{ $promotionContext['semester']->end_date->format('d M Y') }}).
+                            Proses kenaikan kelas dapat dilanjutkan untuk {{ $nextYear->name }}.
+                        </div>
+                    @endif
 
                     <div class="alert alert-warning">
                         <i class="bi bi-exclamation-triangle me-2"></i>
@@ -105,4 +123,4 @@
         </div>
     </div>
 </div>
-@endsection
+</x-app-layout>

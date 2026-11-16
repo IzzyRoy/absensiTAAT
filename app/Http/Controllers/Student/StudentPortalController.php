@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Services\QrTokenService;
 use App\Services\DateTimeService;
 use App\Services\AttendanceDashboardUpdateService;
+use App\Services\AcademicCalendarService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +30,10 @@ class StudentPortalController extends Controller
     /**
      * Dashboard siswa: info profil, statistik kehadiran, QR placeholder.
      */
-    public function dashboard(AttendanceDashboardUpdateService $attendanceUpdates)
+    public function dashboard(
+        AttendanceDashboardUpdateService $attendanceUpdates,
+        AcademicCalendarService $academicCalendar
+    )
     {
         $user = Auth::user();
         $student = Student::where('user_id', $user->id)->with(['class', 'parent'])->first();
@@ -76,6 +80,7 @@ class StudentPortalController extends Controller
         }
 
         $qrTtl = (int) config('absensi.qr_token.ttl_seconds', 30);
+        $calendarStatus = $academicCalendar->statusOn($this->dateTimeService->currentDate());
         $attendanceRevision = $attendanceUpdates->revision(
             AttendanceGate::query()
                 ->where('student_id', $student->id)
@@ -95,6 +100,7 @@ class StudentPortalController extends Controller
             'todaySchedules',
             'qrTtl',
             'attendanceRevision',
+            'calendarStatus',
         ));
     }
 

@@ -17,6 +17,8 @@ class Semester extends Model
         'semester_number',
         'start_date',
         'end_date',
+        'holiday_start_date',
+        'holiday_end_date',
         'is_active',
     ];
 
@@ -25,6 +27,8 @@ class Semester extends Model
         'end_date' => 'date',
         'is_active' => 'boolean',
         'semester_number' => 'integer',
+        'holiday_start_date' => 'date',
+        'holiday_end_date' => 'date',
     ];
 
     public function academicYear(): BelongsTo
@@ -35,5 +39,29 @@ class Semester extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function getPeriodLabelAttribute(): string
+    {
+        return $this->semester_number === 1 ? 'Ganjil' : 'Genap';
+    }
+
+    public function breakStatusOn(\Carbon\CarbonInterface|string $date): string
+    {
+        if (!$this->holiday_start_date || !$this->holiday_end_date) {
+            return 'not_configured';
+        }
+
+        $date = \Illuminate\Support\Carbon::parse($date)->toDateString();
+
+        if ($date < $this->holiday_start_date->toDateString()) {
+            return 'upcoming';
+        }
+
+        if ($date > $this->holiday_end_date->toDateString()) {
+            return 'finished';
+        }
+
+        return 'holiday';
     }
 }

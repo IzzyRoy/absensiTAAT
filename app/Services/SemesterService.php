@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Semester;
+use App\Models\AcademicYear;
 use Illuminate\Support\Facades\DB;
 
 class SemesterService
@@ -31,6 +32,8 @@ class SemesterService
         return DB::transaction(function () use ($data) {
             if (!empty($data['is_active'])) {
                 Semester::where('is_active', true)->update(['is_active' => false]);
+                AcademicYear::where('is_active', true)->update(['is_active' => false]);
+                AcademicYear::whereKey($data['academic_year_id'])->update(['is_active' => true]);
             }
 
             $semester = Semester::create($data);
@@ -49,6 +52,10 @@ class SemesterService
                 Semester::where('id', '!=', $semester->id)
                     ->where('is_active', true)
                     ->update(['is_active' => false]);
+                AcademicYear::where('is_active', true)
+                    ->where('id', '!=', $data['academic_year_id'])
+                    ->update(['is_active' => false]);
+                AcademicYear::whereKey($data['academic_year_id'])->update(['is_active' => true]);
             }
 
             $semester->update($data);

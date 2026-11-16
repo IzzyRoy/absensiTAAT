@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\SemesterRequest;
 use App\Models\Semester;
 use App\Models\AcademicYear;
 use App\Services\SemesterService;
+use App\Services\DateTimeService;
 use Illuminate\Http\Request;
 
 class SemesterController extends Controller
@@ -21,7 +22,8 @@ class SemesterController extends Controller
     public function index(Request $request)
     {
         $semesters = $this->service->getAll($request->all());
-        return view('admin.semesters.index', compact('semesters'));
+        $today = app(DateTimeService::class)->currentDate();
+        return view('admin.semesters.index', compact('semesters', 'today'));
     }
 
     public function create()

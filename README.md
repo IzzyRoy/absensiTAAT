@@ -62,6 +62,16 @@ Ini adalah kontrak snapshot HTTP polling, bukan Laravel broadcast event. Data di
 
 Catatan absensi gerbang saat ini memiliki batas unik `student_id + date`, bukan `session_id`; proses penyimpanan juga tidak menyimpan sesi sekolah pada record gerbang. Karena itu kontrak mengirim `session_id: null` dan identitas yang dapat dipastikan adalah siswa, tanggal, serta record. Polling hanya membaca data dan tidak membuat atau mengubah absensi, sehingga tidak menambah risiko catatan ganda. Batas unik database yang sudah ada tetap menjadi perlindungan pencatatan harian.
 
+### Kalender akademik dan libur semester
+
+Admin mengelola kalender melalui menu Tahun Ajaran dan Semester. Nomor semester `1` berarti Ganjil dan `2` berarti Genap. Formulir semester menyediakan tanggal mulai dan akhir libur; tanggal libur disimpan pada record semester bersama `academic_year_id`, sehingga periode tidak tercampur saat berganti tahun ajaran. Jalankan `php artisan migrate` setelah pembaruan kode untuk menambahkan `holiday_start_date` dan `holiday_end_date`.
+
+Status kalender ditampilkan pada dashboard admin, siswa, dan orang tua, serta status periode per semester pada daftar semester. `AcademicCalendarService::periodOn($date)` memilih semester yang tanggalnya sesuai dan memverifikasi bahwa tanggal itu juga berada di rentang tahun ajaran pemilik semester; service tidak menggunakan semester aktif dari tahun ajaran lain sebagai fallback. `statusOn($date)` mengutamakan semester yang sedang berjalan, lalu memeriksa periode libur yang telah ditetapkan.
+
+Transisi kenaikan kelas hanya tersedia setelah tanggal akhir Semester Genap pada tahun ajaran aktif, dan memerlukan Semester Ganjil tahun ajaran tujuan. Tanggal/sumber kalender untuk integrasi proses kenaikan kelas tersedia melalui `AcademicCalendarService::promotionContext($currentAcademicYear, $nextAcademicYear)`. Mengganti semester tidak mengubah kelas siswa; perubahan kelas tetap dilakukan secara eksplisit melalui alur transisi tahun ajaran. Aktivasi tahun ajaran baru juga mengaktifkan Semester Ganjil milik tahun tersebut agar fitur yang masih membaca semester aktif tidak memakai semester dari tahun sebelumnya.
+
+Periode libur hanya ditampilkan sebagai informasi kalender. Perubahan ini tidak menonaktifkan atau mengubah kebijakan pencatatan absensi saat libur, karena kebijakan tersebut belum ditentukan.
+
 ## 2. Persyaratan Sistem
 
 Sebelum menjalankan aplikasi, pastikan perangkat sudah memiliki:

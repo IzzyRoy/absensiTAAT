@@ -1,6 +1,5 @@
-@extends('layouts.app')
-
-@section('content')
+<x-app-layout>
+    @section('title', 'Kelulusan Kelas 12')
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-12">
@@ -153,4 +152,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-@endsection
+</x-app-layout>

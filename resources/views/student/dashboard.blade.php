@@ -123,6 +123,19 @@
             </div>
         </div>
 
+        <div class="alert {{ $calendarStatus['type'] === 'holiday' ? 'alert-warning' : 'alert-info' }} d-flex align-items-center gap-2 py-2 mb-4" role="status">
+            <i class="bi bi-calendar2-week fs-5"></i>
+            <span>
+                <strong>{{ $calendarStatus['label'] }}</strong>
+                @if($calendarStatus['academic_year'])
+                    · Tahun Ajaran {{ $calendarStatus['academic_year']->name }}
+                @endif
+                @if($calendarStatus['semester']?->holiday_start_date && $calendarStatus['semester']?->holiday_end_date)
+                    · Libur: {{ $calendarStatus['semester']->holiday_start_date->format('d M Y') }} – {{ $calendarStatus['semester']->holiday_end_date->format('d M Y') }}
+                @endif
+            </span>
+        </div>
+
         {{-- ── Info Profil & Status Hari Ini ───────────────────────── --}}
         <div class="row g-3 mb-4">
             {{-- Profile Card --}}

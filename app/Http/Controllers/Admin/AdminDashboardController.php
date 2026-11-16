@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\DateTimeService;
 use App\Services\AttendanceDashboardUpdateService;
+use App\Services\AcademicCalendarService;
 
 class AdminDashboardController extends Controller
 {
@@ -25,9 +26,13 @@ class AdminDashboardController extends Controller
     /**
      * Show real-time statistics and weekly trend on the Admin Dashboard.
      */
-    public function index(AttendanceDashboardUpdateService $attendanceUpdates)
+    public function index(
+        AttendanceDashboardUpdateService $attendanceUpdates,
+        AcademicCalendarService $academicCalendar
+    )
     {
         $today = $this->dateTimeService->currentDate();
+        $calendarStatus = $academicCalendar->statusOn($today);
         $attendanceRevision = $attendanceUpdates->revision(
             AttendanceGate::query()->whereDate('date', $today)
         );
@@ -118,7 +123,8 @@ class AdminDashboardController extends Controller
             'chartIzin',
             'chartTidakHadir',
             'activities',
-            'attendanceRevision'
+            'attendanceRevision',
+            'calendarStatus'
         ));
     }
 

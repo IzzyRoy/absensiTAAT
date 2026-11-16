@@ -74,6 +74,27 @@
                             </div>
                         </div>
 
+                        <div class="rounded-3 bg-light p-3 mb-4">
+                            <h6 class="fw-semibold mb-1">Periode Libur Semester</h6>
+                            <p class="form-text mt-0 mb-3">Periode ini hanya ditampilkan sebagai informasi kalender dan tidak mengubah aturan absensi.</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="holiday_start_date" class="form-label fw-semibold">Mulai Libur</label>
+                                    <input type="date" name="holiday_start_date" id="holiday_start_date" class="form-control @error('holiday_start_date') is-invalid @enderror" value="{{ old('holiday_start_date', $semester->holiday_start_date?->format('Y-m-d')) }}">
+                                    @error('holiday_start_date')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="holiday_end_date" class="form-label fw-semibold">Akhir Libur</label>
+                                    <input type="date" name="holiday_end_date" id="holiday_end_date" class="form-control @error('holiday_end_date') is-invalid @enderror" value="{{ old('holiday_end_date', $semester->holiday_end_date?->format('Y-m-d')) }}">
+                                    @error('holiday_end_date')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mb-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $semester->is_active) ? 'checked' : '' }}>

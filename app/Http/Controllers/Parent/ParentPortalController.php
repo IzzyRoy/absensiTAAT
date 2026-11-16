@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Gate;
 use Carbon\Carbon;
 use App\Services\AttendanceDashboardUpdateService;
 use App\Services\DateTimeService;
+use App\Services\AcademicCalendarService;
 
 class ParentPortalController extends Controller
 {
@@ -23,14 +24,20 @@ class ParentPortalController extends Controller
     /**
      * Main parent dashboard page.
      */
-    public function dashboard(Request $request, AttendanceDashboardUpdateService $attendanceUpdates)
+    public function dashboard(
+        Request $request,
+        AttendanceDashboardUpdateService $attendanceUpdates,
+        AcademicCalendarService $academicCalendar
+    )
     {
+        $calendarStatus = $academicCalendar->statusOn($this->dateTimeService->currentDate());
         $parent = Auth::user()->parent;
 
         if (!$parent) {
             return view('parent.dashboard', [
                 'children'      => collect(),
                 'activeStudent' => null,
+                'calendarStatus' => $calendarStatus,
             ]);
         }
 
@@ -44,6 +51,7 @@ class ParentPortalController extends Controller
             return view('parent.dashboard', [
                 'children'      => $children,
                 'activeStudent' => null,
+                'calendarStatus' => $calendarStatus,
             ]);
         }
 
@@ -66,7 +74,12 @@ class ParentPortalController extends Controller
         );
 
         return view('parent.dashboard', array_merge(
-            ['children' => $children, 'activeStudent' => $activeStudent, 'attendanceRevision' => $attendanceRevision],
+            [
+                'children' => $children,
+                'activeStudent' => $activeStudent,
+                'attendanceRevision' => $attendanceRevision,
+                'calendarStatus' => $calendarStatus,
+            ],
             $dashboardData
         ));
     }

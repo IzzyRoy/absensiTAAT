@@ -49,6 +49,8 @@
                             <th>No. Semester</th>
                             <th>Tanggal Mulai</th>
                             <th>Tanggal Selesai</th>
+                            <th>Periode Libur</th>
+                            <th>Status Kalender</th>
                             <th>Status</th>
                             <th class="text-center" style="width: 150px;">Aksi</th>
                         </tr>
@@ -61,6 +63,29 @@
                                 <td data-label="No. Semester">Semester {{ $semester->semester_number }}</td>
                                 <td data-label="Tanggal Mulai">{{ $semester->start_date->format('d M Y') }}</td>
                                 <td data-label="Tanggal Selesai">{{ $semester->end_date->format('d M Y') }}</td>
+                                <td data-label="Periode Libur">
+                                    @if($semester->holiday_start_date && $semester->holiday_end_date)
+                                        {{ $semester->holiday_start_date->format('d M Y') }} – {{ $semester->holiday_end_date->format('d M Y') }}
+                                    @else
+                                        <span class="text-muted">Belum diatur</span>
+                                    @endif
+                                </td>
+                                <td data-label="Status Kalender">
+                                    @php($breakStatus = $semester->breakStatusOn($today))
+                                    @switch($breakStatus)
+                                        @case('holiday')
+                                            <span class="badge bg-warning-subtle text-warning-emphasis">Sedang Libur</span>
+                                            @break
+                                        @case('upcoming')
+                                            <span class="badge bg-info-subtle text-info-emphasis">Akan Libur</span>
+                                            @break
+                                        @case('finished')
+                                            <span class="badge bg-secondary-subtle text-secondary-emphasis">Libur Selesai</span>
+                                            @break
+                                        @default
+                                            <span class="badge bg-light text-muted">Belum Diatur</span>
+                                    @endswitch
+                                </td>
                                 <td data-label="Status">
                                     @if($semester->is_active)
                                         <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-8">Aktif</span>
@@ -85,7 +110,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
+                                <td colspan="9" class="text-center py-4 text-muted">
                                     <i class="bi bi-inbox fs-2 d-block mb-2"></i>
                                     Tidak ada data semester ditemukan.
                                 </td>

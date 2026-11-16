@@ -4,17 +4,25 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
+use App\Models\Semester;
 use App\Services\AcademicYearTransitionService;
+use App\Services\AcademicCalendarService;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class AcademicYearTransitionController extends Controller
 {
     protected $transitionService;
+    protected AcademicCalendarService $academicCalendar;
 
-    public function __construct(AcademicYearTransitionService $transitionService)
-    {
+    public function __construct(
+        AcademicYearTransitionService $transitionService,
+        AcademicCalendarService $academicCalendar
+    ) {
         $this->transitionService = $transitionService;
+        $this->academicCalendar = $academicCalendar;
     }
 
     /**
@@ -46,7 +54,9 @@ class AcademicYearTransitionController extends Controller
                 ->with('info', 'Silakan buat tahun ajaran baru terlebih dahulu sebelum memulai proses kenaikan kelas.');
         }
 
-        return view('admin.academic-years.transition.index', compact('currentYear', 'nextYear'));
+        $promotionContext = $this->academicCalendar->promotionContext($currentYear, $nextYear);
+
+        return view('admin.academic-years.transition.index', compact('currentYear', 'nextYear', 'promotionContext'));
     }
 
     /**
@@ -54,6 +64,10 @@ class AcademicYearTransitionController extends Controller
      */
     public function grade10To11()
     {
+        if ($redirect = $this->requireCompletedSemesterTwo()) {
+            return $redirect;
+        }
+
         $currentYear = AcademicYear::where('is_active', true)->first();
         $nextYear    = $this->findNextYear($currentYear);
 
@@ -71,7 +85,11 @@ class AcademicYearTransitionController extends Controller
      */
     public function getGrade11Classes(Request $request)
     {
-        $nextYear = AcademicYear::find($request->year_id);
+        if ($redirect = $this->requireCompletedSemesterTwo()) {
+            return $redirect;
+        }
+
+        $nextYear = $this->requestedNextYear($request->year_id);
         $majorId  = $request->major_id;
 
         if (!$nextYear) {
@@ -88,6 +106,10 @@ class AcademicYearTransitionController extends Controller
      */
     public function processGrade10To11(Request $request)
     {
+        if ($redirect = $this->requireCompletedSemesterTwo()) {
+            return $redirect;
+        }
+
         $request->validate([
             'students'               => 'required|array',
             'students.*.student_id'  => 'required|exists:students,id',
@@ -95,7 +117,7 @@ class AcademicYearTransitionController extends Controller
             'students.*.class_id'    => 'required|exists:classes,id',
         ]);
 
-        $nextYear = AcademicYear::find($request->next_year_id);
+        $nextYear = $this->requestedNextYear($request->next_year_id);
 
         if (!$nextYear) {
             return back()->with('error', 'Tahun ajaran tujuan tidak ditemukan.');
@@ -130,6 +152,10 @@ class AcademicYearTransitionController extends Controller
      */
     public function grade11To12()
     {
+        if ($redirect = $this->requireCompletedSemesterTwo()) {
+            return $redirect;
+        }
+
         $currentYear = AcademicYear::where('is_active', true)->first();
         $nextYear    = $this->findNextYear($currentYear);
 
@@ -146,13 +172,17 @@ class AcademicYearTransitionController extends Controller
      */
     public function processGrade11To12(Request $request)
     {
+        if ($redirect = $this->requireCompletedSemesterTwo()) {
+            return $redirect;
+        }
+
         $request->validate([
             'assignments'              => 'required|array',
             'assignments.*.student_id' => 'required|exists:students,id',
             'assignments.*.class_id'   => 'required|exists:classes,id',
         ]);
 
-        $nextYear = AcademicYear::find($request->next_year_id);
+        $nextYear = $this->requestedNextYear($request->next_year_id);
 
         if (!$nextYear) {
             return back()->with('error', 'Tahun ajaran tujuan tidak ditemukan.');
@@ -184,6 +214,10 @@ class AcademicYearTransitionController extends Controller
      */
     public function grade12Graduate()
     {
+        if ($redirect = $this->requireCompletedSemesterTwo()) {
+            return $redirect;
+        }
+
         $currentYear = AcademicYear::where('is_active', true)->first();
         $nextYear    = $this->findNextYear($currentYear);
 
@@ -200,6 +234,10 @@ class AcademicYearTransitionController extends Controller
      */
     public function processGrade12Graduate(Request $request)
     {
+        if ($redirect = $this->requireCompletedSemesterTwo()) {
+            return $redirect;
+        }
+
         $request->validate([
             'assignments'              => 'required|array',
             'assignments.*.student_id' => 'required|exists:students,id',
@@ -207,7 +245,7 @@ class AcademicYearTransitionController extends Controller
             'assignments.*.class_id'   => 'nullable|exists:classes,id',
         ]);
 
-        $nextYear = AcademicYear::find($request->next_year_id);
+        $nextYear = $this->requestedNextYear($request->next_year_id);
 
         if (!$nextYear) {
             return back()->with('error', 'Tahun ajaran tujuan tidak ditemukan.');
@@ -240,6 +278,10 @@ class AcademicYearTransitionController extends Controller
      */
     public function finalize()
     {
+        if ($redirect = $this->requireCompletedSemesterTwo()) {
+            return $redirect;
+        }
+
         $currentYear = AcademicYear::where('is_active', true)->first();
         $nextYear    = $this->findNextYear($currentYear);
 
@@ -251,21 +293,26 @@ class AcademicYearTransitionController extends Controller
      */
     public function activateNewYear(Request $request)
     {
-        $currentYear = AcademicYear::where('is_active', true)->first();
-        $nextYear    = AcademicYear::find($request->next_year_id);
+        if ($redirect = $this->requireCompletedSemesterTwo()) {
+            return $redirect;
+        }
 
-        if (!$nextYear) {
+        $currentYear = AcademicYear::where('is_active', true)->first();
+        $nextYear    = $currentYear ? $this->findNextYear($currentYear) : null;
+
+        if (!$nextYear || (int) $request->next_year_id !== $nextYear->id) {
             return back()->with('error', 'Tahun ajaran baru tidak ditemukan.');
         }
 
         try {
-            // Deactivate current year
-            $currentYear->is_active = false;
-            $currentYear->save();
+            $nextSemester = $nextYear->semesters()->where('semester_number', 1)->firstOrFail();
 
-            // Activate next year
-            $nextYear->is_active = true;
-            $nextYear->save();
+            DB::transaction(function () use ($currentYear, $nextYear, $nextSemester) {
+                $currentYear->update(['is_active' => false]);
+                $nextYear->update(['is_active' => true]);
+                Semester::where('is_active', true)->update(['is_active' => false]);
+                $nextSemester->update(['is_active' => true]);
+            });
 
             return redirect()->route('admin.academic-years.index')
                 ->with('success', 'Tahun ajaran baru berhasil diaktifkan! Selamat tahun ajaran ' . $nextYear->name);
@@ -273,5 +320,34 @@ class AcademicYearTransitionController extends Controller
             Log::error('Activate new year error: ' . $e->getMessage());
             return back()->with('error', 'Terjadi kesalahan saat mengaktifkan tahun ajaran baru: ' . $e->getMessage());
         }
+    }
+
+    private function requireCompletedSemesterTwo(): ?RedirectResponse
+    {
+        $currentYear = AcademicYear::where('is_active', true)->first();
+        if (!$currentYear) {
+            return redirect()->route('admin.academic-years.index')
+                ->with('error', 'Tidak ada tahun ajaran aktif.');
+        }
+
+        $nextYear = $this->findNextYear($currentYear);
+        $context = $this->academicCalendar->promotionContext($currentYear, $nextYear);
+
+        if (!$context['eligible']) {
+            return redirect()->route('admin.academic-years.transition.index')
+                ->with('warning', $context['reason']);
+        }
+
+        return null;
+    }
+
+    private function requestedNextYear(mixed $requestedId): ?AcademicYear
+    {
+        $currentYear = AcademicYear::where('is_active', true)->first();
+        $nextYear = $currentYear ? $this->findNextYear($currentYear) : null;
+
+        return $nextYear && (int) $requestedId === $nextYear->id
+            ? $nextYear
+            : null;
     }
 }
