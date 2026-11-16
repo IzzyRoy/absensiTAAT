@@ -367,4 +367,19 @@
         // Nothing special needed — QR generation is on the qrcode page
     </script>
     @endpush
+    @if (session('attendance_notice'))
+        @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                window.Swal.fire({
+                    icon: 'info',
+                    title: 'Absensi Hari Ini',
+                    text: @json(session('attendance_notice')),
+                    confirmButtonText: 'OK'
+                });
+            });
+        </script>
+        @endpush
+    @endif
+
 </x-app-layout>

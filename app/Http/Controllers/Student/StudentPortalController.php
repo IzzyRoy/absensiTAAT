@@ -8,6 +8,7 @@ use App\Models\Schedule;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Services\QrTokenService;
+use App\Services\DateTimeService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,10 +17,12 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class StudentPortalController extends Controller
 {
     protected QrTokenService $qrService;
+    protected DateTimeService $dateTimeService;
 
-    public function __construct(QrTokenService $qrService)
+    public function __construct(QrTokenService $qrService, DateTimeService $dateTimeService)
     {
         $this->qrService = $qrService;
+        $this->dateTimeService = $dateTimeService;
     }
 
     /**
@@ -104,9 +107,37 @@ class StudentPortalController extends Controller
             return redirect()->route('student.dashboard')->with('error', 'Akun siswa tidak aktif.');
         }
 
+        $attendance = $this->attendanceToday($student);
+        if ($attendance) {
+            return redirect()->route('student.dashboard')->with(
+                'attendance_notice',
+                $this->attendanceNotice($student, $attendance)
+            );
+        }
+
         $qrTtl = (int) config('absensi.qr_token.ttl_seconds', 30);
 
         return view('student.qrcode', compact('student', 'qrTtl'));
+    }
+
+    /**
+     * Check whether the student has already been scanned while the QR page is open.
+     */
+    public function qrcodeStatus()
+    {
+        $student = Student::where('user_id', Auth::id())->first();
+
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Data siswa tidak ditemukan.'], 404);
+        }
+
+        $attendance = $this->attendanceToday($student);
+
+        return response()->json([
+            'success' => true,
+            'attended' => (bool) $attendance,
+            'message' => $attendance ? $this->attendanceNotice($student, $attendance) : null,
+        ]);
     }
 
     /**
@@ -123,6 +154,15 @@ class StudentPortalController extends Controller
 
         if (!$student->is_active) {
             return response()->json(['success' => false, 'message' => 'Akun siswa tidak aktif.'], 403);
+        }
+
+        $attendance = $this->attendanceToday($student);
+        if ($attendance) {
+            return response()->json([
+                'success' => false,
+                'attended' => true,
+                'message' => $this->attendanceNotice($student, $attendance),
+            ], 409);
         }
 
         $qrToken = $this->qrService->generateToken($student);
@@ -144,6 +184,19 @@ class StudentPortalController extends Controller
                 'ttl_seconds' => $ttl,
             ],
         ]);
+    }
+
+    private function attendanceToday(Student $student): ?AttendanceGate
+    {
+        return AttendanceGate::where('student_id', $student->id)
+            ->whereDate('date', $this->dateTimeService->currentDate())
+            ->first();
+    }
+
+    private function attendanceNotice(Student $student, AttendanceGate $attendance): string
+    {
+        return "Nama {$student->name} sudah melakukan absen hari ini pada pukul " .
+            substr((string) $attendance->time_in, 0, 5) . '.';
     }
 
     /**

@@ -32,6 +32,8 @@ class AttendanceGateTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['app.url' => 'http://localhost']);
+        \Illuminate\Support\Facades\URL::forceRootUrl('http://localhost');
 
         // Seed Roles
         Role::firstOrCreate(['name' => 'super_admin']);
@@ -169,6 +171,58 @@ class AttendanceGateTest extends TestCase
         // Try to scan again with same used token should fail
         $this->expectException(\Exception::class);
         $this->service->processQrScan($token, $this->admin->id);
+    }
+
+    public function test_successful_scan_returns_the_recorded_attendance_time(): void
+    {
+        Queue::fake();
+
+        $response = $this->actingAs($this->admin)
+            ->postJson(route('admin.attendance.scan.post'), ['scan_value' => 'ANDI-12345']);
+
+        $attendance = AttendanceGate::where('student_id', $this->student->id)->firstOrFail();
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.name', $this->student->name)
+            ->assertJsonPath('data.time', substr($attendance->time_in, 0, 5))
+            ->assertJsonPath('message', "Absensi berhasil dicatat untuk {$this->student->name} pada pukul " . substr($attendance->time_in, 0, 5) . '.');
+    }
+
+    public function test_student_cannot_reopen_or_regenerate_qr_after_attendance_today(): void
+    {
+        Queue::fake();
+        $studentUser = User::findOrFail($this->student->user_id);
+
+        $this->actingAs($studentUser)
+            ->get(route('student.qrcode'))
+            ->assertOk();
+
+        $this->getJson(route('student.qrcode.status'))
+            ->assertOk()
+            ->assertJsonPath('attended', false);
+
+        $this->service->processBarcodeScan('ANDI-12345', $this->admin->id);
+
+        $attendance = AttendanceGate::where('student_id', $this->student->id)->firstOrFail();
+        $message = "Nama {$this->student->name} sudah melakukan absen hari ini pada pukul " .
+            substr($attendance->time_in, 0, 5) . '.';
+
+        $response = $this->actingAs($studentUser)->get(route('student.qrcode'));
+        $response->assertRedirect(route('student.dashboard'))
+            ->assertSessionHas('attendance_notice', $message);
+
+        $this->actingAs($studentUser)
+            ->getJson(route('student.qrcode.status'))
+            ->assertOk()
+            ->assertJsonPath('attended', true)
+            ->assertJsonPath('message', $message);
+
+        $this->actingAs($studentUser)
+            ->postJson(route('student.qrcode.generate'))
+            ->assertStatus(409)
+            ->assertJsonPath('attended', true)
+            ->assertJsonPath('message', $message);
     }
 
     public function test_auto_alpha_scheduler_marks_missing_students(): void

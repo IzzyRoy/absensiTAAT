@@ -174,6 +174,7 @@ Route::middleware(['auth', 'active', 'role:siswa'])
 
         // QR Code AJAX endpoint
         Route::get('/qr-code', [StudentPortalController::class, 'qrcode'])->name('qrcode');
+        Route::get('/qr-code/status', [StudentPortalController::class, 'qrcodeStatus'])->name('qrcode.status');
         Route::post('/qr-code/generate', [StudentPortalController::class, 'generateQr'])->name('qrcode.generate');
 
         // Jadwal Pelajaran

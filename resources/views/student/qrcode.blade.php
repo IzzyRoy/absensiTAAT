@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Absensi — {{ $student->name }}</title>
-    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    @vite(['resources/sass/app.scss', 'resources/js/app.js', 'resources/js/sweetalert-confirm.js'])
     <style>
         body {
             background: #eef4ff;
@@ -178,12 +178,15 @@
 
     <script>
     const GENERATE_URL = '{{ route("student.qrcode.generate") }}';
+    const STATUS_URL   = '{{ route("student.qrcode.status") }}';
     const CSRF_TOKEN   = '{{ csrf_token() }}';
     const TTL          = {{ $qrTtl }};
 
     let timer        = null;
     let secondsLeft  = 0;
     let autoInterval = null;
+    let attendancePolling = null;
+    let attendanceNoticeShown = false;
 
     const qrLoading   = document.getElementById('qr-loading');
     const qrExpired   = document.getElementById('qr-expired');
@@ -192,7 +195,52 @@
     const timerText   = document.getElementById('timer-text');
     const btnRefresh  = document.getElementById('btn-refresh');
 
+    function showAlreadyAttended(message) {
+        if (attendanceNoticeShown) return;
+        attendanceNoticeShown = true;
+
+        if (autoInterval) clearInterval(autoInterval);
+        if (timer) clearTimeout(timer);
+        if (attendancePolling) clearInterval(attendancePolling);
+        btnRefresh.disabled = true;
+        qrContainer.innerHTML = '';
+        qrLoading.classList.add('d-none');
+        qrExpired.classList.remove('show');
+        timerBar.style.width = '0%';
+        timerText.textContent = 'Absensi hari ini sudah tercatat';
+
+        window.Swal.fire({
+            icon: 'info',
+            title: 'Absensi Hari Ini',
+            text: message,
+            confirmButtonText: 'OK'
+        }).then(() => {
+            window.location.replace('{{ route("student.dashboard") }}');
+        });
+    }
+
+    function checkAttendanceStatus() {
+        if (attendanceNoticeShown) return;
+
+        fetch(STATUS_URL, {
+            headers: { 'Accept': 'application/json' },
+            cache: 'no-store'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Gagal memeriksa status absensi.');
+            return response.json();
+        })
+        .then(response => {
+            if (response.success && response.attended) {
+                showAlreadyAttended(response.message);
+            }
+        })
+        .catch(error => console.error(error));
+    }
+
     function generateQr() {
+        if (attendanceNoticeShown) return;
+
         // Clear existing timer
         if (autoInterval) clearInterval(autoInterval);
         if (timer)        clearTimeout(timer);
@@ -212,10 +260,21 @@
             },
             body: JSON.stringify({})
         })
-        .then(r => r.json())
-        .then(response => {
+        .then(r => r.json().then(response => ({ status: r.status, response })))
+        .then(({ status, response }) => {
+            if (attendanceNoticeShown) return;
+
             qrLoading.classList.add('d-none');
             btnRefresh.disabled = false;
+
+            if (response.attended) {
+                showAlreadyAttended(response.message);
+                return;
+            }
+
+            if (status >= 400) {
+                throw new Error(response.message || 'Gagal membuat QR absensi.');
+            }
 
             if (!response.success || !response.data) {
                 showExpired();
@@ -233,9 +292,12 @@
             // Start countdown
             startCountdown(response.data.ttl_seconds ?? TTL);
         })
-        .catch(() => {
+        .catch(error => {
+            if (attendanceNoticeShown) return;
+
             qrLoading.classList.add('d-none');
             btnRefresh.disabled = false;
+            console.error(error);
             showExpired();
         });
     }
@@ -276,8 +338,12 @@
         timerText.textContent = 'QR kedaluwarsa — tap Perbarui';
     }
 
-    // Auto-generate on page load
-    document.addEventListener('DOMContentLoaded', generateQr);
+    // Auto-generate on page load and detect attendance recorded by the gate scanner.
+    document.addEventListener('DOMContentLoaded', function () {
+        generateQr();
+        checkAttendanceStatus();
+        attendancePolling = setInterval(checkAttendanceStatus, 3000);
+    });
     </script>
 </body>
 </html>

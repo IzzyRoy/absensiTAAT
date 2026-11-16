@@ -854,8 +854,7 @@
             profileKelas.innerText = data.kelas || '-';
             profileJurusan.innerText = data.jurusan || '-';
             profileStatus.innerText = data.status || '-';
-            var now = new Date();
-            profileWaktu.innerText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            profileWaktu.innerText = data.time || '-';
             profileBackdrop.classList.add('show');
         }
 

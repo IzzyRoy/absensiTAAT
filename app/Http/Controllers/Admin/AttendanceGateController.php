@@ -60,7 +60,8 @@ class AttendanceGateController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Absensi berhasil dicatat untuk {$student->name}.",
+                'message' => "Absensi berhasil dicatat untuk {$student->name} pada pukul " .
+                    substr((string) $attendance->time_in, 0, 5) . '.',
                 'data' => [
                     'name' => $student->name,
                     'nis' => $student->nis,
