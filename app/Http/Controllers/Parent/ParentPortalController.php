@@ -59,10 +59,14 @@ class ParentPortalController extends Controller
         session(['parent_selected_student' => $activeStudent->id]);
 
         $dashboardData = $this->getDashboardData($activeStudent);
+        $now = $this->dateTimeService->now();
         $attendanceRevision = $attendanceUpdates->revision(
             AttendanceGate::query()
                 ->where('student_id', $activeStudent->id)
-                ->whereDate('date', $this->dateTimeService->currentDate())
+                ->whereBetween('date', [
+                    $now->copy()->startOfMonth()->toDateString(),
+                    $now->copy()->endOfMonth()->toDateString(),
+                ])
         );
 
         return view('parent.dashboard', array_merge(

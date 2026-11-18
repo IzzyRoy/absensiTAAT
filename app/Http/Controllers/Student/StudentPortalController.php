@@ -79,7 +79,7 @@ class StudentPortalController extends Controller
         $attendanceRevision = $attendanceUpdates->revision(
             AttendanceGate::query()
                 ->where('student_id', $student->id)
-                ->whereDate('date', $this->dateTimeService->currentDate())
+                ->whereBetween('date', [$monthStart, $monthEnd])
         );
 
         return view('student.dashboard', compact(
@@ -114,17 +114,10 @@ class StudentPortalController extends Controller
             return redirect()->route('student.dashboard')->with('error', 'Akun siswa tidak aktif.');
         }
 
-        $attendance = $this->attendanceToday($student);
-        if ($attendance) {
-            return redirect()->route('student.dashboard')->with(
-                'attendance_notice',
-                $this->attendanceNotice($student, $attendance)
-            );
-        }
-
         $qrTtl = (int) config('absensi.qr_token.ttl_seconds', 30);
+        $alreadyAttended = $this->attendanceToday($student) !== null;
 
-        return view('student.qrcode', compact('student', 'qrTtl'));
+        return view('student.qrcode', compact('student', 'qrTtl', 'alreadyAttended'));
     }
 
     /**
@@ -143,7 +136,7 @@ class StudentPortalController extends Controller
         return response()->json([
             'success' => true,
             'attended' => (bool) $attendance,
-            'message' => $attendance ? $this->attendanceNotice($student, $attendance) : null,
+            'message' => $attendance ? 'Anda berhasil absen' : null,
         ]);
     }
 
@@ -168,7 +161,7 @@ class StudentPortalController extends Controller
             return response()->json([
                 'success' => false,
                 'attended' => true,
-                'message' => $this->attendanceNotice($student, $attendance),
+                'message' => 'Anda berhasil absen',
             ], 409);
         }
 
@@ -198,12 +191,6 @@ class StudentPortalController extends Controller
         return AttendanceGate::where('student_id', $student->id)
             ->whereDate('date', $this->dateTimeService->currentDate())
             ->first();
-    }
-
-    private function attendanceNotice(Student $student, AttendanceGate $attendance): string
-    {
-        return "Nama {$student->name} sudah melakukan absen hari ini pada pukul " .
-            substr((string) $attendance->time_in, 0, 5) . '.';
     }
 
     /**

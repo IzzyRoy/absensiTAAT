@@ -28,8 +28,11 @@ class AdminDashboardController extends Controller
     public function index(AttendanceDashboardUpdateService $attendanceUpdates)
     {
         $today = $this->dateTimeService->currentDate();
+        $todayObj = $this->dateTimeService->today();
+        $startWeek = $todayObj->copy()->subDays(6)->format('Y-m-d');
+        $endWeek = $todayObj->format('Y-m-d');
         $attendanceRevision = $attendanceUpdates->revision(
-            AttendanceGate::query()->whereDate('date', $today)
+            AttendanceGate::query()->whereBetween('date', [$startWeek, $endWeek])
         );
 
         // 1. Current Stats (New Logic)
@@ -65,10 +68,6 @@ class AdminDashboardController extends Controller
             ->count();
 
         // 2. Query 7 Days Trend
-        $todayObj = $this->dateTimeService->today();
-        $startWeek = $todayObj->copy()->subDays(6)->format('Y-m-d');
-        $endWeek = $todayObj->format('Y-m-d');
-
         $dailyStats = AttendanceGate::whereBetween('date', [Carbon::parse($startWeek)->startOfDay(), Carbon::parse($endWeek)->endOfDay()])
             ->select('date', 'status', DB::raw('count(*) as count'))
             ->groupBy('date', 'status')

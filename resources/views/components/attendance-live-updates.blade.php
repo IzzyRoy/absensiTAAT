@@ -15,7 +15,7 @@
         const element = document.querySelector('[data-attendance-live-updates]');
         if (!element) return;
 
-        const interval = 30000;
+        const interval = 10000;
         let revision = element.dataset.revision;
         let inFlight = false;
         let reloading = false;
@@ -33,7 +33,8 @@
                 if (!response.ok) throw new Error('HTTP ' + response.status);
 
                 const update = await response.json();
-                if (update.event !== 'attendance.gate.updated' || typeof update.revision !== 'string') {
+                if (!['attendance.gate.updated', 'attendance.subject.updated'].includes(update.event)
+                    || typeof update.revision !== 'string') {
                     throw new Error('Format pembaruan absensi tidak valid.');
                 }
 

@@ -184,4 +184,9 @@
         </div>
 
     </div>
+
+    @include('components.attendance-live-updates', [
+        'url' => route('attendance.updates'),
+        'revision' => $attendanceRevision,
+    ])
 </x-app-layout>

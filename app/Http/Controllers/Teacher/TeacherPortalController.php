@@ -7,6 +7,8 @@ use App\Models\Teacher;
 use App\Models\Schedule;
 use App\Models\AttendanceSubject;
 use App\Services\AttendanceSubjectService;
+use App\Services\AttendanceDashboardUpdateService;
+use App\Services\DateTimeService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -41,12 +43,15 @@ class TeacherPortalController extends Controller
     /**
      * Dashboard Guru: hari ini, jadwal mengajar, status absensi.
      */
-    public function dashboard()
+    public function dashboard(
+        AttendanceDashboardUpdateService $attendanceUpdates,
+        DateTimeService $dateTimeService
+    )
     {
         $teacher = $this->getTeacherOrRedirect();
         $todaySchedules = $this->attendanceService->getTodaySchedules($teacher);
 
-        $today = Carbon::today()->format('Y-m-d');
+        $today = $dateTimeService->currentDate();
         
         // Fetch existing attendance records for today to show status
         $todayAttendances = AttendanceSubject::whereIn('schedule_id', $todaySchedules->pluck('id'))
@@ -69,6 +74,12 @@ class TeacherPortalController extends Controller
             }
         }
 
+        $attendanceRevision = $attendanceUpdates->subjectRevision(
+            AttendanceSubject::query()
+                ->where('teacher_id', $teacher->id)
+                ->whereDate('date', $today)
+        );
+
         return view('teacher.dashboard', compact(
             'teacher',
             'todaySchedules',
@@ -76,7 +87,8 @@ class TeacherPortalController extends Controller
             'schedulesCount',
             'submittedCount',
             'draftCount',
-            'today'
+            'today',
+            'attendanceRevision'
         ));
     }
 
