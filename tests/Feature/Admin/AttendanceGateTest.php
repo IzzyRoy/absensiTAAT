@@ -205,12 +205,13 @@ class AttendanceGateTest extends TestCase
         $this->service->processBarcodeScan('ANDI-12345', $this->admin->id);
 
         $attendance = AttendanceGate::where('student_id', $this->student->id)->firstOrFail();
-        $message = "Nama {$this->student->name} sudah melakukan absen hari ini pada pukul " .
-            substr($attendance->time_in, 0, 5) . '.';
+        $message = 'Anda berhasil absen';
 
         $response = $this->actingAs($studentUser)->get(route('student.qrcode'));
-        $response->assertRedirect(route('student.dashboard'))
-            ->assertSessionHas('attendance_notice', $message);
+        $response->assertOk()
+            ->assertSee($message)
+            ->assertDontSee('QR diperbarui otomatis')
+            ->assertDontSee(route('student.qrcode.generate'));
 
         $this->actingAs($studentUser)
             ->getJson(route('student.qrcode.status'))

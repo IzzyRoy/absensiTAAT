@@ -124,6 +124,12 @@
 
     <div class="container py-4 flex-fill d-flex align-items-start justify-content-center">
         <div class="qr-card">
+            @if ($alreadyAttended)
+                <div class="alert alert-success text-center mb-0" role="status">
+                    <i class="bi bi-check-circle-fill me-2"></i>Anda berhasil absen
+                </div>
+            @else
+            <div id="qr-content">
 
             {{-- Student Info --}}
             <div class="student-info d-flex align-items-center gap-3 mb-3">
@@ -173,12 +179,19 @@
                 Tunjukkan QR ini ke petugas piket untuk absensi gerbang.<br>
                 QR diperbarui otomatis setiap <strong>{{ $qrTtl }} detik</strong>.
             </p>
+            </div>
+            <div class="alert alert-success text-center d-none" id="attendance-success" role="status">
+                <i class="bi bi-check-circle-fill me-2"></i>Anda berhasil absen
+            </div>
+            @endif
         </div>
     </div>
 
+    @if (! $alreadyAttended)
     <script>
     const GENERATE_URL = '{{ route("student.qrcode.generate") }}';
     const STATUS_URL   = '{{ route("student.qrcode.status") }}';
+    const DASHBOARD_URL = '{{ route("student.dashboard") }}';
     const CSRF_TOKEN   = '{{ csrf_token() }}';
     const TTL          = {{ $qrTtl }};
 
@@ -194,29 +207,25 @@
     const timerBar    = document.getElementById('timer-bar');
     const timerText   = document.getElementById('timer-text');
     const btnRefresh  = document.getElementById('btn-refresh');
+    const qrContent   = document.getElementById('qr-content');
+    const successNotice = document.getElementById('attendance-success');
 
-    function showAlreadyAttended(message) {
+    function showAlreadyAttended() {
         if (attendanceNoticeShown) return;
         attendanceNoticeShown = true;
 
         if (autoInterval) clearInterval(autoInterval);
         if (timer) clearTimeout(timer);
         if (attendancePolling) clearInterval(attendancePolling);
+        qrContent.classList.add('d-none');
+        successNotice.classList.remove('d-none');
         btnRefresh.disabled = true;
         qrContainer.innerHTML = '';
         qrLoading.classList.add('d-none');
         qrExpired.classList.remove('show');
         timerBar.style.width = '0%';
-        timerText.textContent = 'Absensi hari ini sudah tercatat';
-
-        window.Swal.fire({
-            icon: 'info',
-            title: 'Absensi Hari Ini',
-            text: message,
-            confirmButtonText: 'OK'
-        }).then(() => {
-            window.location.replace('{{ route("student.dashboard") }}');
-        });
+        timerText.textContent = 'Anda berhasil absen';
+        window.setTimeout(() => window.location.replace(DASHBOARD_URL), 1500);
     }
 
     function checkAttendanceStatus() {
@@ -232,7 +241,7 @@
         })
         .then(response => {
             if (response.success && response.attended) {
-                showAlreadyAttended(response.message);
+                showAlreadyAttended();
             }
         })
         .catch(error => console.error(error));
@@ -268,7 +277,7 @@
             btnRefresh.disabled = false;
 
             if (response.attended) {
-                showAlreadyAttended(response.message);
+                showAlreadyAttended();
                 return;
             }
 
@@ -345,5 +354,6 @@
         attendancePolling = setInterval(checkAttendanceStatus, 3000);
     });
     </script>
+    @endif
 </body>
 </html>
