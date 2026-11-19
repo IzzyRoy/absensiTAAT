@@ -72,7 +72,7 @@ class ParentPortalController extends Controller
         return view('parent.dashboard', array_merge(
             ['children' => $children, 'activeStudent' => $activeStudent, 'attendanceRevision' => $attendanceRevision],
             $dashboardData
-        ));
+        ))->with('attendanceChannel', 'attendance.student.'.$activeStudent->id);
     }
 
     /**
@@ -81,7 +81,11 @@ class ParentPortalController extends Controller
      *
      * GET /parent/dashboard/student/{student}
      */
-    public function studentData(Request $request, Student $student)
+    public function studentData(
+        Request $request,
+        Student $student,
+        AttendanceDashboardUpdateService $attendanceUpdates,
+    )
     {
         // Policy check: student must belong to the authenticated parent
         Gate::authorize('viewDashboard', $student);
@@ -90,11 +94,20 @@ class ParentPortalController extends Controller
         session(['parent_selected_student' => $student->id]);
 
         $dashboardData = $this->getDashboardData($student);
+        $now = $this->dateTimeService->now();
+        $revision = $attendanceUpdates->revision(
+            AttendanceGate::query()
+                ->where('student_id', $student->id)
+                ->whereBetween('date', [
+                    $now->copy()->startOfMonth()->toDateString(),
+                    $now->copy()->endOfMonth()->toDateString(),
+                ])
+        );
 
-        return view('parent.partials.dashboard-content', array_merge(
+        return response()->view('parent.partials.dashboard-content', array_merge(
             ['activeStudent' => $student],
             $dashboardData
-        ));
+        ))->header('X-Attendance-Revision', $revision);
     }
 
     // ──────────────────────────────────────────────

@@ -9,6 +9,7 @@ use App\Models\Schedule;
 use App\Models\Student;
 use App\Models\AttendanceSubject;
 use App\Models\AttendanceSubjectDetail;
+use App\Events\AttendanceSubjectUpdated;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -117,6 +118,12 @@ class AttendanceSubjectService
                     ]);
                 }
 
+                event(new AttendanceSubjectUpdated(
+                    (int) $attendance->id,
+                    (int) $attendance->teacher_id,
+                    $attendance->date->toDateString(),
+                ));
+
                 ActivityLogService::logCreate($attendance, "Inisiasi draf absensi mapel untuk kelas {$schedule->class->name} - {$schedule->subject->name} tanggal {$date}");
             }
 
@@ -160,6 +167,12 @@ class AttendanceSubjectService
                     ]
                 );
             }
+
+            event(new AttendanceSubjectUpdated(
+                (int) $attendance->id,
+                (int) $attendance->teacher_id,
+                $attendance->date->toDateString(),
+            ));
 
             // Fire activity logs
             if ($status === 'submitted' && $original['status'] === 'draft') {

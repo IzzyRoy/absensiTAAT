@@ -95,7 +95,7 @@ class StudentPortalController extends Controller
             'todaySchedules',
             'qrTtl',
             'attendanceRevision',
-        ));
+        ))->with('attendanceChannel', 'attendance.student.'.$student->id);
     }
 
     /**

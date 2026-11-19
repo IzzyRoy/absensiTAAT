@@ -118,7 +118,7 @@ class AdminDashboardController extends Controller
             'chartTidakHadir',
             'activities',
             'attendanceRevision'
-        ));
+        ))->with('attendanceChannel', 'attendance.admin');
     }
 
 

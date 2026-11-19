@@ -38,27 +38,17 @@ https://gitlab.com/abisuryoN/absensi-sekolah
 
 ### Pembaruan otomatis dashboard absensi
 
-Dashboard admin, siswa, guru piket, dan orang tua memeriksa endpoint `GET /attendance/updates` setiap 30 detik. Jika revisi absensi yang berada dalam cakupan akun berubah, browser memuat ulang dashboard secara otomatis; pengguna tidak perlu menekan refresh. Tab yang sedang tidak terlihat melewati polling, dan permintaan yang masih berjalan tidak ditumpuk.
+Dashboard admin, siswa, guru piket, guru, dan orang tua menerima event melalui Laravel Broadcasting, Laravel Reverb, dan Laravel Echo. Dashboard tidak melakukan polling berkala. Event yang relevan memuat ulang data dashboard melalui HTTP, dengan penundaan singkat untuk menggabungkan event berurutan. HTTP `GET /attendance/updates` dipakai untuk sinkronisasi awal setelah WebSocket tersambung/kembali tersambung, setelah tab aktif kembali, atau setelah orang tua memilih anak lain. Jika event terlewat saat koneksi terputus/halaman tidak aktif, endpoint membandingkan revisi dan memuat ulang hanya jika diperlukan.
 
-Polling dipilih sebagai opsi hosting yang paling kompatibel. Repository ini tidak memasang Laravel Reverb, konfigurasi contoh menetapkan `BROADCAST_CONNECTION=log`, dan berkas konfigurasi/deployment yang tersedia tidak membuktikan server produksi dapat menjalankan proses Reverb/WebSocket secara stabil. Kemampuan hosting aktual tetap perlu dikonfirmasi oleh administrator; polling tidak membutuhkan daemon atau koneksi WebSocket yang persisten. Interval 30 detik membatasi beban dan berarti pembaruan dapat tertunda hingga sekitar 30 detik.
+Kanal WebSocket bersifat privat dan diotorisasi lewat sesi login serta role/relasi akun. Event hanya membawa ID dan tanggal; data dashboard diambil kembali melalui HTTP yang sudah memiliki otorisasi. `REVERB_APP_SECRET` hanya digunakan server-side. Hanya `REVERB_APP_KEY` (public key) dan host/port/scheme yang diteruskan ke Vite; jangan menambahkan `APP_KEY` atau `REVERB_APP_SECRET` ke variabel `VITE_*`.
 
-Kontrak respons untuk integrasi ini bernama `attendance.gate.updated`; `data` berisi `attendance_id`, `student_id`, `date` (`Y-m-d`), `session_id`, dan `status`, disertai `revision`. Contoh:
+Untuk konfigurasi lokal, isi variabel `REVERB_APP_ID`, `REVERB_APP_KEY`, dan `REVERB_APP_SECRET` di `.env`, lalu set `BROADCAST_CONNECTION=reverb`. Jalankan `php artisan reverb:start` dan worker queue (`php artisan queue:work`) bersama aplikasi. Atur `REVERB_ALLOWED_ORIGINS` hanya ke origin aplikasi. File `.env` aktif tidak dikelola oleh repository.
 
-```json
-{
-  "event": "attendance.gate.updated",
-  "data": {
-    "attendance_id": 42,
-    "student_id": 7,
-    "date": "2026-11-16",
-    "session_id": null,
-    "status": "hadir"
-  },
-  "revision": "sha256..."
-}
-```
+Di production, jalankan Reverb sebagai proses terkelola di belakang reverse proxy TLS, dan pastikan firewall hanya membuka endpoint WebSocket yang diperlukan. Jika memakai beberapa server Reverb, aktifkan scaling dengan Redis. Uji kapasitas sesuai infrastruktur aktual; benchmark lokal 50/100/200 koneksi bukan jaminan kapasitas production 1.200 koneksi.
 
-Ini adalah kontrak snapshot HTTP polling, bukan Laravel broadcast event. Data dibatasi menurut peran: admin melihat tanggal sekolah berjalan, siswa melihat datanya sendiri, piket melihat scan yang dikaitkan ke sesi piketnya, dan orang tua melihat anak yang sedang dipilih serta diizinkan oleh policy.
+Benchmark lokal non-production dapat dijalankan di Windows dengan `powershell -ExecutionPolicy Bypass -File scripts\run-reverb-benchmark.ps1`. Script membuat kredensial sementara, menjalankan Reverb hanya di loopback, menguji 50/100/200 koneksi, lalu menghentikan prosesnya. Endpoint sinkronisasi di benchmark bersifat sintetis dan tidak memakai MySQL; angka bandwidth menghitung payload aplikasi, bukan overhead jaringan/TLS. Untuk pengukuran MySQL atau kapasitas production, gunakan staging terisolasi dengan data sintetis.
+
+Endpoint sinkronisasi mengembalikan revisi cakupan dashboard. Cakupan data tetap dibatasi menurut role: admin melihat tren tujuh hari, siswa dan orang tua melihat data bulanan untuk siswa terkait, piket melihat absensi sesi petugas hari ini, dan guru melihat absensi mapel miliknya hari ini.
 
 Catatan absensi gerbang saat ini memiliki batas unik `student_id + date`, bukan `session_id`; proses penyimpanan juga tidak menyimpan sesi sekolah pada record gerbang. Karena itu kontrak mengirim `session_id: null` dan identitas yang dapat dipastikan adalah siswa, tanggal, serta record. Polling hanya membaca data dan tidak membuat atau mengubah absensi, sehingga tidak menambah risiko catatan ganda. Batas unik database yang sudah ada tetap menjadi perlindungan pencatatan harian.
 
@@ -66,12 +56,14 @@ Catatan absensi gerbang saat ini memiliki batas unik `student_id + date`, bukan 
 
 Sebelum menjalankan aplikasi, pastikan perangkat sudah memiliki:
 
-- PHP 8.3 dengan ekstensi yang dibutuhkan Laravel dan aplikasi.
+- PHP 8.3 dengan ekstensi yang dibutuhkan Laravel dan aplikasi, termasuk cURL untuk client PHP Reverb.
 - Composer.
 - MySQL atau MariaDB yang kompatibel.
 - Node.js dan npm.
 - Git.
 - Browser modern.
+
+Laravel Echo 2 requires Node.js 20.19+ or 22.12+ for asset builds.
 
 Pengguna Windows dapat menggunakan Laragon untuk membantu menyiapkan PHP dan MySQL. Pengguna Linux dapat memasang PHP, Composer, Node.js, dan MySQL secara terpisah.
 

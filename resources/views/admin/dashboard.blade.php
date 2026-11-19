@@ -151,6 +151,7 @@
     @include('components.attendance-live-updates', [
         'url' => route('attendance.updates'),
         'revision' => $attendanceRevision,
+        'channel' => $attendanceChannel,
     ])
 
     @push('scripts')

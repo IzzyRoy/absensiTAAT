@@ -5,7 +5,9 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
+use App\Models\AttendanceGate;
 use App\Models\Student;
+use App\Observers\AttendanceGateObserver;
 use App\Policies\StudentParentPolicy;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFive();
+        AttendanceGate::observe(AttendanceGateObserver::class);
 
         // Parent → Student authorization
         Gate::policy(Student::class, StudentParentPolicy::class);

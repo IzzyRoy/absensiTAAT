@@ -258,6 +258,8 @@
         @include('components.attendance-live-updates', [
             'url' => route('attendance.updates'),
             'revision' => $attendanceRevision,
+            'channel' => $attendanceChannel,
+            'channelPrefix' => 'attendance.student.',
         ])
     @endif
 
@@ -309,6 +311,9 @@
 
                 const html = await response.text();
                 contentBox.innerHTML = html;
+                window.dispatchEvent(new CustomEvent('attendance:student-selected', {
+                    detail: { studentId, revision: response.headers.get('X-Attendance-Revision') },
+                }));
 
                 // Smooth scroll to dashboard content on mobile
                 if (window.innerWidth < 768) {

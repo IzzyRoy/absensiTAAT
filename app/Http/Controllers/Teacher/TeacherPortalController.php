@@ -89,7 +89,7 @@ class TeacherPortalController extends Controller
             'draftCount',
             'today',
             'attendanceRevision'
-        ));
+        ))->with('attendanceChannel', 'attendance.teacher.'.$teacher->id);
     }
 
     /**

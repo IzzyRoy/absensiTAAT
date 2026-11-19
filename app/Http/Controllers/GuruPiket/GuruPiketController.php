@@ -99,7 +99,8 @@ class GuruPiketController extends Controller
                 ->whereDate('date', $today)
         );
 
-        return view('guru-piket.dashboard', compact('recentScans', 'stats', 'namaLengkap', 'today', 'attendanceRevision'));
+        return view('guru-piket.dashboard', compact('recentScans', 'stats', 'namaLengkap', 'today', 'attendanceRevision'))
+            ->with('attendanceChannel', 'attendance.piket.'.$petugasPiketId);
     }
 
     /**
